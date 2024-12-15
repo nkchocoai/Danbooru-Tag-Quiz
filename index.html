@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danbooru Tag Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .tag {
+            display: inline-block;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .tag:hover {
+            background-color: #e0e0e0;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+
+        #retry {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #retry:hover {
+            background-color: #0056b3;
+        }
+
+        #score {
+            margin-top: 20px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Danbooru Tag Quiz</h1>
+    <div id="tags">
+        <div class="tag" id="tag1" onclick="selectTag(1)"></div>
+        <div class="tag" id="tag2" onclick="selectTag(2)"></div>
+    </div>
+    <div id="result"></div>
+    <div id="score">Score: 0</div>
+
+    <script>
+        const tagsData = []; // Placeholder for parsed CSV data.
+        let currentTags = [];
+        let score = 0;
+
+        // Fetch and parse the CSV file.
+        async function loadTags() {
+            // https://github.com/DominikDoom/a1111-sd-webui-tagcomplete/blob/main/tags/danbooru.csv
+            const response = await fetch('danbooru.csv');
+            const text = await response.text();
+            const lines = text.split('\n');
+
+            lines.forEach(line => {
+                const [tag, type, count, alias] = line.split(',');
+                if (type === '0' && parseInt(count) >= 1000) {
+                    tagsData.push({ tag, count: parseInt(count) });
+                }
+            });
+        }
+
+        // Initialize the quiz.
+        function initializeQuiz() {
+            document.getElementById('result').textContent = '';
+            randomizeTags();
+            updateScore();
+        }
+
+        // Pick two random tags.
+        function randomizeTags() {
+            currentTags = [];
+            while (currentTags.length < 2) {
+                const randomIndex = Math.floor(Math.random() * tagsData.length);
+                const randomTag = tagsData[randomIndex];
+                if (!currentTags.includes(randomTag)) {
+                    currentTags.push(randomTag);
+                }
+            }
+
+            document.getElementById('tag1').textContent = currentTags[0].tag;
+            document.getElementById('tag2').textContent = currentTags[1].tag;
+        }
+
+        // Handle tag selection.
+        function selectTag(selectedIndex) {
+            const otherIndex = selectedIndex === 1 ? 1 : 0;
+            const selectedTag = currentTags[selectedIndex - 1];
+            const otherTag = currentTags[otherIndex];
+
+            const resultDiv = document.getElementById('result');
+
+            if (selectedTag.count >= otherTag.count) {
+                resultDiv.innerHTML = `Correct! ${getTagWikiLink(selectedTag.tag)}: ${selectedTag.count}, ${getTagWikiLink(otherTag.tag)}: ${otherTag.count}`;
+                score++;
+            } else {
+                resultDiv.innerHTML = `Wrong! ${getTagWikiLink(selectedTag.tag)}: ${selectedTag.count}, ${getTagWikiLink(otherTag.tag)}: ${otherTag.count}`;
+                score = 0; // Reset score on incorrect answer.
+            }
+
+            updateScore();
+            randomizeTags();
+        }
+
+        function getTagWikiLink(tag) {
+            return `<a href="https://danbooru.donmai.us/wiki_pages/${tag}" target="_blank">${tag}</a>`;
+        }
+
+        // Update score display.
+        function updateScore() {
+            document.getElementById('score').textContent = `Score: ${score}`;
+        }
+
+        // Load the tags and start the quiz.
+        loadTags().then(initializeQuiz);
+    </script>
+</body>
+
+</html>
