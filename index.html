@@ -32,24 +32,17 @@
             font-size: 1.2em;
         }
 
-        #retry {
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 1em;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        #retry:hover {
-            background-color: #0056b3;
-        }
-
         #score {
             margin-top: 20px;
             font-size: 1em;
+        }
+
+        #history {
+            margin-top: 20px;
+            text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
     </style>
 </head>
@@ -62,15 +55,17 @@
     </div>
     <div id="result"></div>
     <div id="score">Score: 0</div>
+    <div id="history"></div>
 
     <script>
         const tagsData = []; // Placeholder for parsed CSV data.
         let currentTags = [];
         let score = 0;
+        let highScore = parseInt(localStorage.getItem('highScore')) || 0;
+        const history = [];
 
         // Fetch and parse the CSV file.
         async function loadTags() {
-            // https://github.com/DominikDoom/a1111-sd-webui-tagcomplete/blob/main/tags/danbooru.csv
             const response = await fetch('danbooru.csv');
             const text = await response.text();
             const lines = text.split('\n');
@@ -85,9 +80,9 @@
 
         // Initialize the quiz.
         function initializeQuiz() {
-            document.getElementById('result').textContent = '';
             randomizeTags();
             updateScore();
+            renderHistory();
         }
 
         // Pick two random tags.
@@ -116,22 +111,35 @@
             if (selectedTag.count >= otherTag.count) {
                 resultDiv.innerHTML = `Correct! ${getTagWikiLink(selectedTag.tag)}: ${selectedTag.count}, ${getTagWikiLink(otherTag.tag)}: ${otherTag.count}`;
                 score++;
+                history.push(`✅ ${getTagWikiLink(selectedTag.tag)} (${selectedTag.count}) vs ${getTagWikiLink(otherTag.tag)} (${otherTag.count})`);
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('highScore', highScore);
+                }
             } else {
                 resultDiv.innerHTML = `Wrong! ${getTagWikiLink(selectedTag.tag)}: ${selectedTag.count}, ${getTagWikiLink(otherTag.tag)}: ${otherTag.count}`;
+                history.push(`❌ ${getTagWikiLink(selectedTag.tag)} (${selectedTag.count}) vs ${getTagWikiLink(otherTag.tag)} (${otherTag.count})`);
                 score = 0; // Reset score on incorrect answer.
             }
 
             updateScore();
-            randomizeTags();
-        }
-
-        function getTagWikiLink(tag) {
-            return `<a href="https://danbooru.donmai.us/wiki_pages/${tag}" target="_blank">${tag}</a>`;
+            renderHistory();
+            initializeQuiz();
         }
 
         // Update score display.
         function updateScore() {
-            document.getElementById('score').textContent = `Score: ${score}`;
+            document.getElementById('score').textContent = `Score: ${score} | High Score: ${highScore}`;
+        }
+
+        // Render history.
+        function renderHistory() {
+            const historyDiv = document.getElementById('history');
+            historyDiv.innerHTML = '<h2>History</h2>' + history.map(entry => `<div>${entry}</div>`).join('');
+        }
+
+        function getTagWikiLink(tag) {
+            return `<a href="https://danbooru.donmai.us/wiki_pages/${tag}" target="_blank">${tag}</a>`;
         }
 
         // Load the tags and start the quiz.
